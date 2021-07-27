@@ -21,3 +21,11 @@
 # ls()         "
 # rm()         변수 삭제
 # complete.cases() na가 아니면 T 반환
+
+# 데이터 추출 sample() 함수
+# 기본 sample(x,size, replace=FALSE, prob = NULL)
+# sample(1:10,3) 1부터 10 사이의 값에서 무작위 3개 추출
+# matrix에서 추출시 sample(temp$x1,3)
+# replace는 추출하고 다시 넣은뒤 추출하는지에 대한 여부 복원추출
+# prob 같은 경우는 가중치를 두는 파라미터이다.
+
