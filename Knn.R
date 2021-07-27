@@ -2,7 +2,7 @@
 install.packages('class')
 library('class')
 
-data<-read.table("knndata.txt",header=T)
+data<-read.table("data/knndata.txt",header=T)
 View(data)
 str(data)
 boxplot(data[,1:7])
