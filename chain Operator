@@ -1,0 +1,33 @@
+dplyr패키지의 chain operations
+단축키 shift + ctrl + M
+
+기존의 작동될 코드
+
+filter(
+  summarise(
+    select(
+      group_by()
+      )
+    )
+  )
+  Data_frame %>% groupby %>% variance %>% function %>% filter.
+  
+  EX)
+  Car93 %>% groupby(Origin,Type,Cylinders) %>% select(Price,MPG.highway) %>% 
+  summarise(price_m = mean(Price, na.rm = TRUE), MPG.highway_m = mean(MPG.highway,na.rm = TRUE) ) %>%
+  filter(price_m > 10 | MPG.highway_m > 25)
+  해석 : Car93 데이터프레임에서 Origin, Type, Cylinders 별로 Price와 MPG.highway 변수에 대해 각각의 평균을 구하는데, 
+  단 평균가격이 10이 넘거나, 평균 연비가 25이상인 것에 대해서만 알고싶다.
+  from = https://rfriend.tistory.com/236
+  
+  EX)
+  sales_data %>% select(shop_id,item_cnt_day) %>% group_by(shop_id) %>% 
+  summarise(item_cnt_day = sum(item_cnt_day, na.rm=T))
+  해석 : sales_data 데이터프레임에서 shop_id 별로, shop_id와 item_cnt_day 변수에 대해 합계를 구한다.
+  
+  EX)
+  sales_data %>%select(shop_id,item_id) %>%group_by(shop_id) %>%
+  summarise(item_id = n_distinct(item_id))
+  해석 : sales_data 데이터프레임에서 shop_id별로, shop_id와 item_id 변수에 대해 고유한 item_id를 구한다.
+  
+  
