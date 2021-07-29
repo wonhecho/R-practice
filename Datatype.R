@@ -2,7 +2,7 @@
 #   .numeric() 숫자형 변환
 #   .ordered() 순서형 변환
 #   .Date()    날짜형으로 변환
-    .factor()  카테고리 요소형으로 전환
+#   .factor()  카테고리 요소형으로 전환
 # is.integer() 정수형인지 확인
 #   .numeric() 숫자형인지 확인
 #   .logical() 논리형인지 확인
