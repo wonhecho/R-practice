@@ -47,7 +47,9 @@ shop_item_data$day = as.factor(shop_item_data$date)
 shop_item_data$weekdays = weekdays(shop_item_data$date)
 shop_item_data$seekdays = as.factor(shop_item_data$weekdays)
                                            
-#카테고리 id도 요소화
+# 카테고리도 요소화
+shop_item_data$category_id = as.factor(shop_item_data$category_id)
+
 
                                           
 
