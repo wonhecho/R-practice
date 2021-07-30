@@ -35,9 +35,21 @@ shop_item_data = <- shop_item_data[c(order(shop_item_data$shop_id)),]
 
 shop_item_data$date = as.Date(sales_data$date,"%d.%m.%Y")
 #EX)
-shop_item_data$year = year(sales_data$date)
-shop_item_data$year = as.factor(sales_data$year)
+shop_item_data$year = year(shop_item_data$date)
+shop_item_data$year = as.factor(shop_item_data$year)
 
+shop_item_data$month = month(shop_itme_data$date)
+shop_item_data$month = as.factor(shop_item_data$month)
+                                           
+shop_item_data$day = day(shop_item_data$date)
+shop_item_data$day = as.factor(shop_item_data$date)
+                                           
+shop_item_data$weekdays = weekdays(shop_item_data$date)
+shop_item_data$seekdays = as.factor(shop_item_data$weekdays)
+                                           
+#카테고리 id도 요소화
+
+                                          
 
 
 
