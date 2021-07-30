@@ -48,11 +48,45 @@ shop_item_data$weekdays = weekdays(shop_item_data$date)
 shop_item_data$seekdays = as.factor(shop_item_data$weekdays)
                                            
 # 카테고리도 요소화
-shop_item_data$category_id = as.factor(shop_item_data$category_id)
+shop_item_data$itme_category_id = as.factor(shop_item_data$item_category_id)
 
-
-                                          
-
+# data summarise
+sales_showwise = shop_item_data %>%
+  select(shop_id,item_category_id) %>%
+  group_by(shop_id) %>%                                        
+  summarise(item_category_id)
+                                           
+# data 그래프화                                           
+ggplot(data =  sales_shopwise, 
+       mapping = aes(x = reorder(shop_id, item_category_id), 
+                     y = item_category_id, 
+                     fill = factor(shop_id))) +
+  geom_histogram(stat = "identity", color = "yellow") +
+  # coord_flip() +
+  xlab("Shop ID") + ylab("Sales category")+
+  # geom_label(stat = "identity",position = position_dodge(width = 1),hjust = "center", aes(label = item_cnt_day)) +
+  ggtitle(label = "Shop wise sales") +
+  theme(
+    # get rid of panel grids
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_line(colour = "gray",linetype = "dotted"),
+    # Change plot and panel background
+    plot.background=element_rect(fill = "black"),
+    panel.background = element_rect(fill = 'black'),
+    # Change legend 
+    # legend.position = c(0.6, 0.07),
+    # legend.direction = "horizontal",
+    legend.background = element_rect(fill = "black", color = NA),
+    legend.key = element_rect(color = "gray", fill = "black"),
+    legend.title = element_text(color = "white"),
+    legend.text = element_text(color = "white"),
+    # align title to top center, top ledt is by default.
+    plot.title = element_text(color = "white", hjust = 0.5, face = "bold"),
+    # axis ticks to bold black
+    axis.text=element_text(colour = "yellow",face = "bold"),
+    axis.title.x = element_text(color = "white"),
+    axis.title.y = element_text(color = "white")
+  )                                         
 
 
 
