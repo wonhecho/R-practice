@@ -291,5 +291,63 @@ mcrlda
 # 상관관계가 있을 것으로 예상되는 관측 변수들을 주성분이라고 불리는 선형종속성이 없는 새로운 변수로 반환
 # 자원축소를 위해 널리 사용된다. LDA와의 차이점은 그룹정보를 활용하지 않고, 변수값과 그룹변수간의
 # 관계를 탐색한다는 점이다. 
+#우선 데이터의 로그 변환을 적용한다.
+fish.data.mx = as.matrix(fish.data[,1:3])
+fish.data.log <- log(fish.data.mx)
+#procmp()가 PCA를 실행하는 함수
+fish.log.pca <- prcomp(fish.data.log, scale=T, center=T)
+summary(fish.log.pca)
+print(fish.log.pca)
+plot(fish.log.pca,ylim=c(0,2))
+#적재계수들의 시각화
+library("ggplot2")
+loadings <- as.data.frame(fish.log.pca$rotation)
+# Add a column with the name of each variable to the loadings data frame.
+loadings$variables <- colnames(fish.data[,1:3])
+q <- ggplot(loadings, aes(x=variables, y= PC1)) + geom_bar(stat='identity')
+q + theme(axis.title = element_text(face="bold", size=20), axis.text = element_text(size=18))
+#PCA 결과 도출된 주성분 점수를 그림으로 나타낼 수 있다.
+scores <- as.data.frame(fish.log.pca$x)
+q2 <- qplot(x = PC1, y = PC2, data = scores, geom = "point", col = fish.data$fish)
+q2 <- q2 + theme(legend.title=element_blank(), legend.text = element_text( size = 20, face = "bold"))
+q2 <- q2 + theme(axis.title = element_text(face="bold", size=20), axis.text = element_text(size=18))
+
+biplot(fish.log.pca)
+#점과 원으로 군집된 차트
+library("devtools")
+install.packages("ggbiplot")
+install_github("vqv/ggbiplot")
+library("ggbiplot")
+fish.class <- fish.data$fish
+g <- ggbiplot(fish.log.pca, obs.scale = 1, var.scale = 1, groups = fish.class, ellipse = TRUE, circle = TRUE)
+g <- g + scale_color_discrete(name = '')
+g <- g + theme(legend.direction = 'horizontal', legend.position = 'top')
+g <- g + theme(legend.title=element_blank(), legend.text = element_text( size = 20, face = "bold"))
+g <- g + theme(axis.title = element_text(face="bold", size=20), axis.text = element_text(size=18))
+g
+# 주성분을 3차원으로 시각화, 그림을 이리저리 돌리면서 확인할 수 있다.
+install.packages("rgl")
+library(rgl)
+fish.pca.col = c("red","blue","green","magenta","black")
+plot3d(fish.log.pca$x[,1:3],col=fish.pca.col[sort(rep(1:5,50))])
+
+set.seed(44)
+c1 <- kmeans(fish.data[,1:3],5)
+fish.data$cluster <- as.factor(c1$cluster)
+plot3d(fish.log.pca$x[,1:3],col=fish.data$cluster,main="K-means cluster")
+
+#데이터가 얼마나 잘 그룹화 되어 있느닞 확인
+with(fish.data, table(cluster,fish))
+#bluegill은 그룹화가 잘 되었지만, 나머지는 잘 되지 않았다.
+di <- dist(fish.data[,1:3],method ="euclidean")
+tree <- hclust(di,method = "ward.D")
+fish.data$hcluster <- as.factor((cutree(tree,k=5)-2)%%3+1)
+plot(tree,xlab="",cex=0.2)
+#사각형의 틀을 만들어주는 코드
+rect.hclust(tree,k=5,border="red")
+#클러스트링이 잘 됐는지 확인.
+table(fish.data$hcluster)
+with(fish.data,table(hcluster,fish))
+
 
 
