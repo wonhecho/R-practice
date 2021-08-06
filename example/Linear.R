@@ -196,6 +196,100 @@ summary(mouse.data.gam2)
 #AIC 함수를 이요해 적합도와 복잡도를 동시에 고려하는 아카이케 정보기준을 계산해본다
 
 AIC(mouse.data.gam,mouse.data.gam2)
-
+  
 #확인결과 AIC가 낮은 두번째 모델이 조금 더 나은 모형이라고 볼 수 있다.
+
+# 선형판별분석 LDA는 데이터셋 내의 그룹정보를 가장 잘 구별해 낼 수 있는 설명변수의 선형결합을 찾는데 사용된다.
+# LDA는 데이터를 사용해 분류모형을 구축할 때 사용하는 선형지도학습 분류법이다.
+# EX) 물고기를 길이와 무게 그리고 물에서 헤엄치는 속력을 따라 분류하는데 LDA를 사용할 수 있다.
+
+set.seed(459)
+Bluegill.length <- sample(seq(15, 22.5, by=0.5), 50, replace=T)
+Bluegill.weight <- sample(seq(0.2, 0.8, by=0.05), 50, replace=T)
+Bowfin.length <- sample(seq(46, 61, by=0.5), 50, replace=T)
+Bowfin.weight <- sample(seq(1.36, 3.2, by=0.5), 50, replace=T)
+Carp.length <- sample(seq(30, 75, by=1), 50, replace=T)
+Carp.weight <- sample(seq(0.2, 3.5, by=0.1), 50, replace=T)
+Goldeye.length <- sample(seq(25, 38, by=0.5), 50, replace=T)
+Goldeye.weight <- sample(seq(0.4, 0.54, by=0.01), 50, replace=T)
+Largemouth_Bass.length <- sample(seq(22, 55, by=0.5), 50, replace=T)
+Largemouth_Bass.weight <- sample(seq(0.68, 1.8, by=0.01), 50, replace=T)
+
+weight <-c(Bluegill.weight, Bowfin.weight, Carp.weight, Goldeye.weight, Largemouth_Bass.weight)
+length <-c(Bluegill.length, Bowfin.length, Carp.length, Goldeye.length, Largemouth_Bass.length)
+speed <- rnorm(50*5, 7.2, sd=1.8)
+fish <- c(rep("Bluegill", 50), rep("Bowfin", 50), rep("Carp", 50), rep("Goldeye", 50), rep("Largemouth_Bass", 50))
+fish.data <- data.frame(length, weight, speed, fish)
+
+str(fish.data)
+
+plot3DfishData <- function(x, y, z, data=fish.data)
+{
+  library(scatterplot3d)
+  #To store the axis labels
+  fish.variable <- colnames(data)
+  scatterplot3d(data[, x], data[, y], data[, z],
+                color = c("blue", "black", "red", "green", "turquoise")[data$fish], 
+                pch = 19, xlab=fish.variable[x], ylab=fish.variable[y], zlab=fish.variable[z])
+}
+
+library(scatterplot3d)
+fish.data$fish = as.factor(fish.data$fish)
+par(mfrow = c(1, 1))
+plot3DfishData(1, 2, 3)
+legend(locator(1),legend=levels((fish.data$fish)), 
+       col=c("blue", "black", "red", "green", "turquoise"), 
+       lty=c(1, 1, 1, 1, 1), lwd=3, 
+       box.lwd = 1, box.col = "black", bg = "white")
+
+
+par(mfrow = c(2, 2))
+plot3DfishData(1, 2, 3)
+plot3DfishData(2, 3, 4)
+plot3DfishData(3, 4, 1)
+plot3DfishData(4, 1, 2)
+
+#MASS 패키지의 lda()함수를 사용해 fish.data에 대한 LDA를 수행
+library("MASS")
+fish.lda <- lda(fish ~ ., data=fish.data,prior = c(1,1,1,1,1)/5)
+#lda는 사전확률, 클래스별 공변량들의 평균, 선형분류방법에 대한 계수들, 트레이스 비율등을 리턴한다.
+# 선형 판별변수들의 그룸간 표준편차와 그룹 내에 표준편차의 비인 특이값은 svd로 알수있다.
+fish.lda$counts
+fish.lda$svd
+#predict()함수를 사용하면 새로운 데이터셋에 대한 분류 결과 및 클래스별 사후확률을 얻을 수 있다.
+set.seed(10)
+#표본데이터 100개를 뽑아낸다
+train100 <- sample(1:nrow(fish.data),100)
+table(fish.data$fish[train100])
+#LDA를 실행
+fish100.lda <- lda(fish ~ ., data=fish.data,prior = c(1,1,1,1,1)/5,subset=train100)
+#예측 데이터저장 
+predict.fish100 <- predict(fish100.lda)
+#예측 비교
+table(fish.data$fish[train100])
+table(predict.fish100$class)
+table(fish.data$fish[train100],predict.fish100$class)
+#예측 결과를 표로 정리
+par(mfrow=c(1,1))
+plot(predict.fish100$x,
+     type="n", xlab="LD1", ylab="LD2",
+     main="TrainingSetLDA Results(n=50)")
+text(predict.fish100$x,
+     as.character(predict.fish100$class),
+     col=as.numeric(fish.data$fish[train100]), cex=1.5)
+abline(h=0, col="gray")
+abline(v=0, col="gray")
+#predict()함수로 나머지 데이터를 분류
+predict.new <- predict(fish100.lda,newdata = fish.data[-train100,])
+table(fish.data$fish[-train100],predict.new$class)
+#오분류율을 계산.
+TAB <- table(fish.data$fish[-train100],predict.new$class)
+mcrlda <- 1 - sum(diag(TAB)/sum(TAB))
+mcrlda
+
+# 주성분분석 PCA는 자료를 분류하는 문제에 활용가능한 또다른 탐색적 방법이다.
+# 상관관계가 있을 것으로 예상되는 관측 변수들을 주성분이라고 불리는 선형종속성이 없는 새로운 변수로 반환
+# 자원축소를 위해 널리 사용된다. LDA와의 차이점은 그룹정보를 활용하지 않고, 변수값과 그룹변수간의
+# 관계를 탐색한다는 점이다. 
+
 
