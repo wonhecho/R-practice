@@ -133,3 +133,128 @@ fit.spline.smooth <- smooth.spline(height~age,nknots=4)
 plot(age,height,pch=16,col='gray',xlab='Age',ylab='Height',main='Height vs Age')
 lines(fit.spline.smooth, pch=16)
 
+
+# 비모수적 비선형 방법
+# Y = a + BX
+# 이것이 아니더라도 X값의 관측치 그리고 X가 주언진 경우 관측한 Y값들을
+# 이용한다면 X값에서 관측된 Y값의 평균으로 예측값을 정하면 된다
+# 점별회귀 또는 점별 평귄 회귀
+
+pointwise.regression <- function(x,y){
+  X <- c(min(x):max(x))
+  Y <- vector('numeric',length(X))
+  for(i in X){
+    Y[i-min(x)+1] <- mean(y[x==i])
+  }
+  return.frame<-data.frame(X,Y)
+  return(return.frame)
+}
+
+expected.height <- pointwise.regression(age,height)
+plot(age,height,pch=16,col='gray',xlab='Age',ylab="Height",main="Height Vs Age")
+lines(expected.height)
+
+pointwise.confint <- function(x,y){
+  X <- (min(x):max(x))
+  Y.list <- list('numeric',length(X))
+  for ( i in X)
+  {
+    t.temp<- t.test(y[x==i])
+    Y.list[[(i-min(x)+1)]] <- c(tmtemp$estimate[[1]],
+                                t.temp$conf.int[1],
+                                t.temp$conf.int[2])
+  }
+  Y.mat <- do.call('rbind',Y.list)
+  return.frame <- data.frame(cbind(X,Y.mat))
+  names(return.frame) <- c('X','Y','Lower.Y','Upper.Y')
+  return(return.frame)
+  }
+boxplot(height ~ age, xlab='Age', ylab='Height',main='Height vs Age')
+
+# 직사각형에 중앙을 지나는 선은 중앙값이고, 밑변과 윗변은 각각 제1사분위수 제 3사분위수이다.
+#상자 바깥의 수염은 사분위수 범위를 즉 1.5배 만큼 그리는 것이 기본 귀칙이고, 수염 바깥의 개별 점들을
+#이상점이라고 한다.
+
+# 커널 회귀는 비선형자료에 부드러운 함수를 적합시키게 해주는 유연한 방법론이다.
+# X값에서 Y의 평균값을 추정할 때 특정 X 값에서의 Y값만이 아닌 주변 값들의 가중분포 정보를
+# 이용하는 방법으로 변 값들에 가중치를 부여하는 방식은 어떤 커널 함수를 선택하느냐 달라진다.
+# 가장 간단한 방법으로는 내장함수인 ksmooth()를 사용하는 것인데 이 함수는 고정 평활량을 사용한다.
+# 함수에는 데이터를 지정하는 인수 외에도 평활량 및 커널 등 명시적으로 지정해야 한다.
+
+smooth.height <- ksmooth(age,height, bandwidth=10,kernel ='normal')
+lines(smooth.height,col='red')
+
+#결과물을 보면 나이가 어린 쪽에 키를 과대추정 하는 것으로 나타난다 이것은 과다평활
+# 평활량을 줄이면 개선 될 수 있다.
+smooth.height <- ksmooth(age,height,bandwidth=2,kernel='normal')
+
+# 이 부분에서는 평활량이 괜찮아진 것으로 보이지만, 나이가 많은 사람의 경우에는
+# 키가 조금씩 줄어드는 모습이 잘 나타나지 않는다.
+# 하지만 ksmooth함수로는 이 모든것을 적합시키기가 불가능하다.
+# 따라서 커널을 이용한 국소다항회귀를 이용한다 KernSmooth 패키지의 locpoly함수를 이용
+# ksmooth는 단순한 가중평균값을 이용하였지만 이것은 가중국소다항회귀방법을 이용한다.
+# locpoly()함수는 각 점마다 다른 평활량 값을 지정할 수 있는 장점이 잇다.
+
+library("KernSmooth")
+bandwidth.vals <- c(rep(1,20),rep(5,30))
+smooth.height <- locpoly(age,height, gridsize = 50, bandwidth = bandwidth.vals)
+lines(smooth.height, col = "blue")
+
+# 이외에 다양한 평활량 선택법이 개발되었는데 평균제곱오차를 최소로 하는 것을 목표로 하는
+# 플러그인 방법이 있다. dpill() 함수를 이용하면 영역 전체에서 사용할 최적의 평활량을 제공
+# 영역별로 달리 사용할 수 있는 역역별 평활량을 계산해주기도 한다.
+# 그 이외에는 교차확인법이 있는데 np 패키지의 npregbw()함수를 사용하면 된다.
+
+h <- dpill(age, height, gridsize = 80)
+plot(age, height, xlab = 'Age', ylab = 'Height', main = 'Height vs Age', col = 'gray', pch = 16)
+smooth.height <- locpoly(age, height, bandwidth = h, gridsize = 80, kernel = 'normal')
+lines(smooth.height, col = 'red')
+
+smooth.height.2.males <- locpoly(age[gender ==1], height[gender == 1], drv = 2, bandwidth = h, gridsize = 80, kernel = 'normal')
+smooth.height.2.males$x[smooth.height.2.males$y == min(smooth.height.2.males$y)]
+smooth.height.2.females <- locpoly(age[gender ==2], height[gender == 2], drv = 2, bandwidth = h, gridsize = 80, kernel = 'normal')
+smooth.height.2.females$x[smooth.height.2.females$y == min(smooth.height.2.females$y)]
+
+# 비선형 데이터르ㄹ적합시키는 방법은 두개의 변수 사이에서 가능
+# 여러개일경우에는 loess()라는 다차원 커널 평활을 이용해야 된다
+# 이전과는 다른점은 최근접이운방법으로 평활량을 정한다는 것이다.
+
+male.weight <- weight[gender==1]
+male.age <- age[gender==1]
+male.height<- height[gender==1]
+weight.fit <- loess(male.weight ~ male.age * male.height,span=1,family='gaussian')
+
+# 주어진 나이와 키에 대한 평균 몸무게를 추정할 수 있다.
+# 이 모형을 이용해 예측치를 계산하려면 s/w에 의존해야 한다.
+age.vals <- seq(from=2,to=85,by=1)
+height.vals <- seq(from = 80,to=200,by=1)
+predicted.weight <- predict(weight.fit, newdata = expand.grid(male.age=age.vals,male.height=height.vals))
+persp(age.vals,height.vals,predicted.weight, theta=40, xlab='Age', ylab= 'Height', zlab="Weight")
+
+# np비선형 분위수 회귀
+# 기본적인 추세 및 독립변수들을 사용한 종속변수의 값을 예측할 목적으로
+# 자료점에 곡선 및 곡면을 적합시키는 것을 시도했지만,
+# 특정 구성원의 모집단 내 상대적 쉰위 혹은 위치를 알아내기 위한 곡선이 필요하다면
+# np 패키지의 npqreg()함수를 이용하면 된다.
+
+detach(body.measures)
+detach(body.measures.youths)
+juveniles <- which (body.measures$age %in% c(2:10))
+body.measures.juveniles.1 <- body.measures[juveniles,]
+attach(body.measures.juveniles.1)
+body.measures.juveniles.2 <- body.measures.juveniles.1[order(age),]
+detach(body.measures.juveniles.1)
+attach(body.measures.juveniles.2)
+install.packages("np")
+library(np)
+bw.est <- npcdistbw(formula=height~age)df
+qreg.10th <- npqreg(bws=bw.est,tau=0.1)
+qreg.25th <- npqreg(bws=bw.est,tau=0.25)
+qreg.50th <- npqreg(bws=bw.est,tau=0.5)
+qreg.75th <- npqreg(bws=bw.est,tau=0.75)
+qreg.90th <- npqreg(bws=bw.est,tau=0.9)
+plot(height~age,type='n',xlab='Age',ylab = "Height",main="Quantiles of age for height",
+     xaxp = c(2,10,(10-2)),xaxp=c(80,160,(160-80)/10))
+
+
+
