@@ -128,3 +128,92 @@ plot(a,type='b',xlab='Principal Componet', ylab='Eigenvalue', main= 'Eigenvalues
 # 세번째 성분일 때가 있고 다른 하나는 여섯번째 성분 다음이다.
 # 따라서 스크리 도표 기준에 따르면 세개의 주성분을 선택하게 된다.
 
+# PCA는 변수에 내재된 총분산을 모델링하는 것이다.
+# 다른 접근법인 요인분석은 변수에 내재된 공통분산을 모델링하는 방법
+# 탐색적 요인 분석에 대해 논의한다.
+
+# 접근 법인 요인분석은 변수에 내재된 공통 분산을 모델링하는 방법
+# EFA는 관측 변수들이 잠재변수라고 부르는 직접 관측이 불가능한 변수드에 의해
+# 설명할 수 있다는 것을 가정 잠재변수들은 공통분산의 원천으로서 모형화됨
+# 무게 중심 방법 논의
+
+le.matrix <- as.matrix(phys.func[,c(2,3,4,8,9,10,13,14)])
+le.cor <- cor(le.matrix)
+le.cor.reduced <- le.cor
+# 각 행의 합을 구하고 다시 행렬의 총합을 구해보자
+# 요인적재계수 추정치는 각 행의 합을 총합의 제곱근으로 나누어 얻는다
+row.sums <- le.cor.reduced %*% matrix(rep(1,8),nrow=8)
+total.sum <- sum(row.sums)
+sqrt.total <- sqrt(total.sum)
+row.sums/sqrt.total
+# 축소상관행렬을 만드는데 사용하고 이 새로운 행렬에 다시 무게중십 방법을 시행 가능
+# 이상의 절차는 요인적재계수 추정치가 수렴조건으로 만족할때 까지 반복
+
+# 다중 요인 모형
+# 두 잠재변수 모두 각 관측변수와 상관관계를 가지는 것과 잠재변수들 사이에도
+# 상관관계가 있는 것을 가정하고 있다.
+# 요인적재계수는 첨자를 붙여 해당 잠재변수와의 관계를 표시하기도 한다.
+
+# 주축요인법
+# 반복적 방법으로 잔차행렬로부터 요인을 추출하기보다는 주축요인법을 사용해 원하는
+# 개수만큼의 요인을 직접 추출하는 방법
+# 축소상관행렬에 대해 고유치분해를 실행해 고유값을 크기순으로 대각에 나열한 대각행렬
+# L과 고유벡터행렬 V를 구하는 작업
+
+phys.cor<- cor(phys.func)
+# 다중상관계수의 제곱값을 이용해 축소상관행렬을 만든다.
+reduce.cor.mat <- function(cor.mat){
+  inverted.cor.mat <- solve(cor.mat)
+  reduced.cor.mat <- cor.mat
+  diag(reduced.cor.mat) <- 1 - (1/diag(inverted.cor.mat))
+  return(reduced.cor.mat)
+}
+
+phys.cor.reduced <- reduce.cor.mat(phys.cor)
+
+paf.method <- function(reduced.matrix,nfactor){
+  row.count <- nrow(reduced.matrix)
+  eigen.r <- eigen(reduced.matrix,symmetric = TRUE)
+  V <- eigen.r$vectors[,c(1:nfactor)]
+  L <- diag(sqrt(eigen.r$values[c(1:nfactor)]),nrow = nfactor)
+  return ((V %*% L))
+}
+path.coef <- paf.method(phys.cor.reduced,3)
+path.coef
+# 추출한 것은 모든 요인에 대해 모든 관측변수가 적재값을 갖는다는 점이다.
+
+# 주축요인법 -> 최대우도방법을 많이 사용
+# 자료 분포가 정규분포에 가까운 경우 매우 좋은 성질을 갖고 있다
+# 최대우도 방법은 데이터가 정규분포를 따름을 가정하고 정규분포에 의한 우도함수를 최대로
+# 최소잔차요인방법은 잔차상관계수를 최소로 하는 방식으로 최대우도 방법과 비슷한 결과를 줌
+
+# 요인 분석 이후 요인 회전을 진행한다.
+# 요인을 회전해 데이터 구조를 보다 간명하게 나타내는 것.
+# 회전은 요인패턴행렬에 포함된 요인적재값을 가능한한 많이 0에 가까운 값이 되도록
+# 하는 것을 목표로 이루어짐.
+# 관측 변수드이 여전히 모든 요인에 대해 적재값을 갖게 되겠지만,
+# 각 관측변수는 특정 요인에 대해 나머지 요인보다 훨씬 높은 적재값을 갖게 됨.
+
+# 회전의 종류로는 직교회전과 사각회전으로 대별 되는데, 직교회전이 가장 많이 쓰이고
+# 해적석인 면에서 우수한 방법으로 여겨진다. 사각회전은 현실적인 추정치를 제공하는 것
+# Quartimax 회전은 요인패턴행렬의 네제곱 값의 총합을 최대로 하는 방법
+# Varimax회전은 행 제곱합을 제곱한 값의 평균을 네제곱합에서 뺀 값
+# Oblimin회전
+# Promax회전
+
+library(GPArotation)
+rotated.structure <- oblimin(path.coef)
+rotated.structure
+
+# 여기서 생성되는 객체는 요인적재행렬, 요인 간 상관행렬, 회전행렬을 포함
+# 요인적재행렬은 20개의 관측항목이 세개의 요인에 어떻게 연관되어 있는지를 알려준다
+# 요인에 따라 어떤 적재값의 크기는 매우 작은 것을 보고
+# 큰 항목들을 통해 요인의 의미를 해석하면 된다.
+# 기준은 0.4 이상 관측변수가 특정요인에 대해 다른 요인에 비해 확실히 
+# 큰 적재부하가 걸려있기도 함
+
+loading.matrix <- rotated.structure$loadings
+loading.matrix [ abs(loading.matrix)<0.3] <- NA
+loading.matrix
+# 첫번째 요인은 전반적 운동기능 두번째 요인은 세밀한 운동기능
+# 세번째 요인은 가사관리능력을 나타낸다. 
