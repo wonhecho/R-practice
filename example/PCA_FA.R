@@ -217,3 +217,24 @@ loading.matrix [ abs(loading.matrix)<0.3] <- NA
 loading.matrix
 # 첫번째 요인은 전반적 운동기능 두번째 요인은 세밀한 운동기능
 # 세번째 요인은 가사관리능력을 나타낸다. 
+
+# psych 패키지를 이용한 고급 EFA
+# 좋은 추정치를 얻기 위해서는 주어진 기준을 만족하는 최적 해를 구하기 위한
+# 반복적인 계산 알고리즘이 필요하다
+
+library(psych)
+fit.efa.prep <- polychoric(phys.func)
+fit.efa.3 <- fa(fit.efa.prep$rho, nfac=3, roate = 'promax')
+fit.efa.3
+
+# 다분상관계수들을 이용해 상관 행렬을 만들어 요인 분석
+# h2, u2는 공통성과 특수성 값이고, 두 합은 1
+# h2가 클수록 요인들이 더 많은 항목 분산을 설명함을 의미
+# 그 아래는 상관계수행렬이 나온다.
+# h2의 값이 작다는 것은 요인들이 데이터를 제대로 설명하지 못했다는 의미
+# 공통성 값은 요인회전 이전에 계산한 적재계수 값의 제곱합이다.
+
+# 내적 일치성을 구하고 싶은 경우 오메가 함수를 이용하면 된다.
+
+omega(fit.efa.prep$rho, nfac=3 , roatate='promax')
+
