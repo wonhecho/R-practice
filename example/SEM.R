@@ -345,3 +345,104 @@ summary(mxRun(factorModel.2))
 # 실행이 중지된 시점에도 여전히 수렴이 진행중이었음을 의미하고
 # 나름 최적의 해를 구한 것이므로 신뢰할만 하다는 의미
 
+
+#lavaan을 이용한 SEM 적합
+# lavaan은 유연하지 않은데 사용하기에는 쉬움.
+phys.func.data <- read.csv('phys_func.txt')[-1]
+names(phys.func.data) <- LETTERS[1:20]
+model.definition.1 <- '
+                  Cognitive =~A + Q + R + S
+                  Legs =~B + C + D + H + I + J + M + N
+                  Arms =~E + F + G + K + L + O + P + T
+                  Cognitive ~~ Legs
+                  Cognitive ~~ Arms
+                  Legs ~~ Arms
+'
+library(lavaan)
+fit.phys.func <- cfa(model.definition.1, data = phys.func.data,
+                     ordered = c('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T'))
+# ordered = 인수는 변수들의 순서형 속성을 가지고 있음을 의미한다.
+# 변수들 간의 다분상관계수를 계산해 분석에 사용하라는 의미
+# 다분상관계수는 연속형 변수를 구간으로 나는 형태로, 관측한 경우 원래의 연속형 변수 간 상관관계를 측정하는데 사용하는 측도
+# 이때 lavaan은 가중최소제곱법을 사용하는데 정규분포 가정도 없고, 불일치도를 계산할 때 다분상관행렬을 사용
+
+summary(fit.phys.func)
+
+fitMeasures(fit.phys.func,c('rmsea','cfi','srmr'))
+
+fit.phys.func.ML <- cfa(model.definition.1, data = phys.func.data , estimator='ML')
+
+# Openmx 와 lavaan 을 비교
+
+hs.dat <- HolzingerSwineford1939
+head(hs.dat)
+hs.model.lavaan <- '
+      visual = ~x1 + x2 + x3
+      textual =~x4 + x5 + x6
+      speed =~ x7 + x8 + x9
+      visual ~~ textual
+      visual ~~ speed
+      textual ~~ speed
+'
+fit.hs.lavaan <- cfa(hs.model.lavaan,data=hs.dat,std.lv = TRUE)
+summary(fit.hs.lavaan)
+
+hs.model.open.mx <- mxModel("Holzinger Swineford",
+                            type="RAM",
+                            manifestVars = names(hs.dat)[7:15],
+                            latentVars = c('visual', 'textual', 'speed'),
+                            mxPath(
+                              from = 'visual',
+                              to = c('x1', 'x2', 'x3'),
+                              free = c(TRUE, TRUE, TRUE),
+                              values = 1
+                            ),
+                            mxPath(
+                              from = 'textual',
+                              to = c('x4', 'x5', 'x6'),
+                              free = c(TRUE, TRUE, TRUE),
+                              values = 1
+                            ),
+                            mxPath(
+                              from = 'speed',
+                              to = c('x7', 'x8', 'x9'),
+                              free = c(TRUE, TRUE, TRUE),
+                              values = 1
+                            ),
+                            mxPath(
+                              from = 'visual',
+                              to = 'textual',
+                              arrows=2,
+                              free=TRUE
+                            ),
+                            mxPath(
+                              from = 'visual',
+                              to = 'speed',
+                              arrows=2,
+                              free=TRUE
+                            ),
+                            mxPath(
+                              from = 'textual',
+                              to = 'speed',
+                              arrows=2,
+                              free=TRUE
+                            ),
+                            mxPath(
+                              from= c('visual', 'textual', 'speed'),
+                              arrows=2,
+                              free=c(FALSE,FALSE,FALSE),
+                              values=1
+                            ),
+                            mxPath(
+                              from= c('x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7', 'x8', 'x9'),
+                              arrows=2
+                            ),
+                            mxData(
+                              observed=cov(hs.dat[,c(7:15)]),
+                              type="cov",
+                              numObs=301
+                            )
+)
+fit.hs.open.mx <- mxRun(hs.model.open.mx)
+summary(fit.hs.open.mx)
+
