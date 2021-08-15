@@ -170,3 +170,45 @@ mean(computer.fail)
 var(computer.fail)
 sd(computer.fail)
 
+#mc2d 패키지 사용
+
+library(mc2d)
+
+# 1차원 몬테카를로 모의실험은 난수들을 사용해 랜덤한 변이가 모델링 대상 시스템의
+# 민감도, 성능, 신뢰도 등에 미치는 영향을 평가하기 위한 방법이다.
+# EX) 방출된 농업 빛 산업 폐기물 때문에 비소에 높은 수준으로 오염된 물을 마시는 것이 암
+# 발병 위험에 미치는 영향을 평가하는 모형을 생각해본다
+# 조건 1. 마을에 공급되는 수돗물의 비소에 대한 평균 집적도는 12ppb로서 최대 허용 기준치 10에 초과
+# 조건 2. 전체 주민의 43.2 %만 수돗물을 마셨고, 생수와 섞어마신 비율은 22.6% 생수만 마신 사람은 34.2%
+# 조건 3. 수돗물과 생수를 섞어 마시면 비소 노출을 1/3수준으로 줄일 수 있고, 생수만 마시면 1/5수준으로 줄임
+# 조건 4. 주민 개인이 마시는 물의 양 평균 6, 형태모수가 60인 역가우스 분포
+# 조건 5. 비소 섭취량은 포아송 분포를 따른다
+# 조건 6. 비소 섭취에 의한 암 발병 확률은 one-hit모형에 의한 투여-반응 관계로 모델링 되는데
+# 매번 비소를 섭취할 때마다 암에 걸릴 확률은 0.0013이다
+# 조건 7. 모형 내에 다른 불확실성 요인은 없다.
+
+#난수를 생성
+rnorm(4,mean=10,sd=3)
+library(statmod)
+library(mc2d)
+
+# 마을 사람들 1001명
+ndvar(1001)
+# 평균 집적도 12
+arsenic.conc <- 12
+#rempiricalD() 함수로 난수를 생성해 1001명의 주민들이 물을 마시는 습관을 시뮬래이션 한다.
+# 그리고 mcstoc()함수를 사용해 나중에 쓸 몬테카를로 객체를 생성하는데 필요한 변수와 관련된 몬테카를로 노드를 생성
+drinking.habit <- mcstoc(func=rempiricalD, values=c(1,1/3,1/5),prob=c(0.432,0.226,0.342))
+# rinvgauss() 함수를 사용해 역가운스분포를 따르는 난수를 생성해 개인별 물 섭취랑을 시뮬레이션
+tap.water.drank <- mcstoc(rinvgauss,mean=6,shape=60)
+# 개인별 평균 비소 노출량 계산
+arsenic.exposure <- arsenic.conc * drinking.habit * tap.water.drank
+#rpois() 함수를 이용해 평균 비소 노출량을 lambda값으로 갖는 난수 생성
+arsenic.dose <- mcstoc(rpois,lambda=arsenic.exposure)
+# 배소 섭취에 의한 암 발병 확률로 부터 리스크를 계산
+prob.per.hit <- 0.0013
+risk <- 1 - (1-prob.per.hit)^arsenic.dose
+# mc()를 이용해 모든 mcnode 객체를 결합해 몬테카를로 모의실험 결과 분석
+As1 <- mc(drinking.habit,tap.water.drank,arsenic.exposure,arsenic.dose,risk)
+summary(As1)
+# 비소 노출에 의한 위험을 확인할 수 있다. 
