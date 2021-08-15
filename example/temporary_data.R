@@ -1,0 +1,172 @@
+# 평균이 10이고, 표준편차가 3인 정규분포를 따르는 난수 4개를 생성하려면
+rnorm(4, mean=10 , sd=3)
+# rpois(10, lambda = 3 )을 실행하면 집중도의 값이 3인 포아송분포를 따르는 10개를 생성할 수 있다.
+# sample() 함수를 사용하면 기존의 벡터로부터 랜덤하게 표본을 추출할 수 있다.
+# 함수는 주어진 벡터의 원소 중에서 size 인수에 지정한 개수만큼 랜덤하게 추출해주는데
+# replace 인수 값이 TRUE 인지 FALSE인지에 따라 복원 및 비복원 추출해준다.
+sample(1:100, size=5, replace=FALSE)
+# 주사위를 6번 던지는 시행
+sample(1:6, size=6, replace=TRUE)
+# 문자형 벡터에서도 sample()를 사용할 수 있다.
+fruits <- c("apple","orange","strawberry","lemon","clementine")
+sample(fruits, size=2, replace=TRUE)
+
+# 의사난수를 시뮬레이션 하는 방법.
+# 의사난수라는 표현은 진정한 의미의 난수가 아니라 난수발생 알고리즘에 의해 만들어지는 숫자
+# 0과 1사이에서 일련의 의사 난수를 생성하는 방법
+# 승법 합동 의사난수 발생기를 이용해 독립이고, 균일분포를 따르는 확률변수들을 시뮬레이션 하는 것
+# 의사난수를 생성하는 데 사용할 수 있는 다양한 방법이 있다.
+# m을 크기가 큰 소수로, k는 10보다 작은 정수로서 가급적 m의 제곱근에 가까운 값이 되도록 정하면
+# 의사 난수를 생성할 수 있다.
+
+getRandomNbs <- function(n,m,seed){
+  pseudorandom.numbers <- numeric(n)
+  k <- round(sqrt(m)) -2
+  for (i in 1:n){
+    seed <- (k*seed) %% m
+    pseudorandom.numbers[i] <- seed/m
+  }
+  return(pseudorandom.numbers)
+}
+
+# 초기값은 27000으로, 소스 m의 값은 334,753으로 하여 5개의 의사난수를 생성
+getRandomNbs(5,334753,27000)
+
+# 사용자가 직접 작성한 의사난수 발생기를 이용하면 생성된 숫자들이 균일 분포를 따르는지
+# 서로 독립인지 확인하는 것은 중요한 일
+# 정규분포가 따르는지 확인해보려면, 카이제곱 검정을 이용해야됨.
+rng.chisq <- function(x,m){
+  Obs <- trunc(m*x)/m
+  Obs <- table(Obs)
+  p <- rep(1,m)/m
+  Exp <- length(x) * p
+  chisq <- sum((Obs-Exp)^2/Exp)
+  pvalue <- 1-pchisq(chisq,m-1)
+  results <- list(test.static=chisq, p.value = pvalue, df=m-1)
+  return(results)
+}
+# x는 의사난수 발생기에 의해 [0,1] 구간내에서 생성된 난수
+# m은 카이제곱 검정에 사용할 부분 구간의 개수이다.
+v <- getRandomNbs(1000,334753,27000)
+rng.chisq(v,m=5)
+# p-value가 충분히 크기 때문에 귀무가설 즉, 생서된 난수가 균일분포를 따른다는 것을 기각할 만한
+# 증거를 찾을 수 없다.
+# 그렇다면 독립인지를 알아보자
+# 시차그림 함수
+lag.plot(v)
+
+# 직접 의사난수를 방생시키는 함수를 작성할 수 있는데, 내장함수인 runif()함수를 사용하면
+# 구간 [a,b] 내에서 균일분포를 따르는 난수를 생성 할 수 있다.
+# runif() 함수의 인수는 min = a, max = b로 지정할 수 있다.
+# 초기값을 지정하지 않으면 함수 내부에서 알아서 결정하고, getRandomNb()함수와는 다른 알고리즘을 사용해 의사난수 생성
+
+a <- runif(n=5,min=0,max=1)
+# 초기값을 특정하고 싶으면 set.seed() 함수를 이용해야 한다.
+
+runif(3)
+# 초깃값을 사용하고 runif
+set.seed(27000)
+runif(3)
+runif(3)
+
+# 즉 초깃값을 설정하게 되면, 미리 결정된 수열을 얻을 수 있게 된다.
+
+# 베르누이 확률변수를 모의실험하는 방법.
+# 베르누이 시행은 두 가지의 가능한 결과, 성공 및 실패만 관측
+
+set.seed(23457)
+guessed.correctly <- runif(30)
+table(guessed.correctly < 0.25)
+# rbern은 정답을 맞힐 확률 p를 인수로 지정해 맞힐 문제의 개수를 시뮬레이션 할 수 있다.
+# p인수에 지정된 확률을 성공 확률로 하여 성공을 1 실패를 0으로 리턴한다.
+guessed.correctly <- rbern(n=30,p=.25)
+guessed.correctly
+sum(guessed.correctly)
+
+# 이항활률 변수를 모의실험하려면 rbinom()함수를 사용한다.
+# size 인수를 1로 지정해 실행
+set.seed(23457)
+rbinom(n=30,size=1,p=.25)
+
+# 문제 : 시간당 100개의 유리병을 생산하는 공장에서 출고된 제품 중 불량품의 갯수를 모의실험
+# 불량률은 0.05이고, 하루에 10시간 작업한다고 생각했을때
+
+set.seed(23457)
+rbinom(n=10,size=100,p=0.05)
+
+# 포아송 확률변수는 보통 주어진 시구간 내에서 관측된 특정 사건의 발생횟수를 모델링
+# rpoi()함수를 사용해 모의실험 
+# 15년간 발생하게 될 부상 건수를 매년 43600건 정도 발생하는 것으로 가정
+
+lag.plot(rpois(15,43600))
+
+# 지수분포 확률변수 
+# 컴퓨터가 평균적으로 6년만에 고장이 난다고 가정하고 교실에 있는 25대의 동종 컴퓨터의 수명을 rexp()함수를 이용해 
+# 모의 실험
+set.seed(453)
+computer.lifetime <- rexp(25,1/6)
+hist(computer.lifetime, probability=TRUE, col="gray", main="Exponential curve for computers with a mean time
+     to failure of 6 years", cex.lab=1.5, cex.main=1.5)
+curve(dexp(x,1/6),add=T)
+
+# 몬테카를로 모의실험
+# 확률변수의 기댓값을 계산하는 것은 중요
+# 결정론적인 알고리즘을 정용하거나 딱 떨어지는 수식으로 계산하기 어렵다
+# 설명변수와 반응변수 간의 관계를 상수항, 지수함수, 거듭제곱, 로그 등 몇가지 기본적인
+# 함수들로만 표현하는 것이 매우 어렵거나 불가능한 경우가 있다.
+# 반복적인 난수 생성을 통해 미지의 확률분포를 비슷하게 근사시키고, 넓은 범위의 다양한 문제에 대한
+# 해결책을 제공하는 알고리즘 방법
+# 확률변수 X 기댓값 E(X) 근사값을 찾기 위해 X와 같은 분포를 갖는 m개의 난수를 생성해
+# 이들의 평균값을 계산해 사용하면 된다.
+# m이 충분히 큰 경우 Xm은 참값 E(X)에 대한 좋은 근사값이 되기 때문이다.
+# 대수의 법칙에 의하면 m이 커짐에 따라 Xm의 분포의 중심위치가 모집단 평균에 가까워지는 경향성이 강해진다.
+# 실제 분포의 이론적 밀도함수에 가까워짐을 확인 할 수도 있다.
+
+# 중심극한정리
+# 표본 크기가 커짐에 따라 Xm의 분포가 점점 정규분포랑 닮아간다는 것이다.
+set.seed(983)
+x.exp <- rexp(1000,rate=0.4)
+mean(x.exp)
+#평균값
+sd(x.exp)
+#표준편차
+hist(x.exp, probability=TRUE, col=gray(0.8),main="",cex.axis=1.2,cex.lab=1.5)
+
+# 난수들이 정규분포랑 거리가 있다. 이번에는 rate값이 0.4인 지수분포로부터 100개의 난수를 생성해
+# 평균값을 계산하는 작업을 500회 반복해 얻은 500개의 평균값의 분포가 어떻게 되는지 확인
+
+x.exp.means <- numeric(100)
+for(i in 1:500){
+  x.exp.means[i] <- mean(rexp(100,0.4))
+}
+hist(x.exp.means,probability=TRUE , col=gray(0.8), main="", cex.axis=1.2,cex.lab=1.5)
+
+# 중심극한정리에 의해 근사적으로 정규분포를 따르는 평균값들의 표준편차의 값은 
+# 모집단 분포의 표준편차 와 다음 관계를 갖게 된다.
+
+mean(x.exp.means)
+sd(x.exp.means)
+
+# 이 예제에서 모집단 분포의 평균 및 표준편차는 모두 2.5이므로 다음 코드를 실행하면 계산할 수 있다.
+2.5/sqrt(100)
+
+# 몬테카를로 방법으로 구한 값과 방금 계산한 이론적인 값이 매우 비슷함.
+# 다른 분포를 따르는 확률변수에도 동일하게 적용
+# 메인보드의 평균수명은 8년이고 하드드라이브는 4년이라고 한다.
+# 부품의 수명에 대해 지수분포를 가정하고 난수를 발생시켜 컴퓨터 수명의 평균 및 분산을 추정해보자
+
+moterboard.fail <- rexp(10000, rate=1/8)
+hard.drive.fail <- rexp(10000, rate=1/6)
+par(mfrow=c(1,2))
+hist(moterboard.fail, probability=TRUE, col=gray(0.8),main = "Simulated motherboard time to failure", cex.axis=1.2, cex.lab=1.5)
+hist(hard.drive.fail, probability=TRUE, col=gray(0.8), main = "Simulated hard drive time to failure", cex.axis=1.2, cex.lab=1.5)
+
+ind <- (hard.drive.fail - moterboard.fail) >0
+
+# 이 인덱스 정보를 이용하면 컴퓨터 고장 시점을 얻을 수 있다
+
+computer.fail <- c(moterboard.fail[ind], hard.drive.fail[!ind])
+mean(computer.fail)
+var(computer.fail)
+sd(computer.fail)
+
