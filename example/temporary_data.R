@@ -212,3 +212,114 @@ risk <- 1 - (1-prob.per.hit)^arsenic.dose
 As1 <- mc(drinking.habit,tap.water.drank,arsenic.exposure,arsenic.dose,risk)
 summary(As1)
 # 비소 노출에 의한 위험을 확인할 수 있다. 
+
+# 2차원 몬테카를로 모의실험
+
+# 앞에 예제에는 모형 파라미터에 불확실성 요인이 없다고 가정했는데 실제로는 그러지 않을 수 있고,
+# 이렇게 되면 2차원 몬테카를로 시뮬레이션을 사용할 수 있다.
+# 하나의 차원은 개별 값의 변이를 위해, 다른 하나의 차원은 모형 내 파라미터에 내재된 불확실성을 위해 사용
+# 변이와 불확실성은 별도로 시뮬레이션 하게 된다. 
+# V, U, VU, O 차례로 변이, 불확실성, 번이와 불확실성 둘 다, 둘다 아님을 의미
+
+# EX) 마을 수돗물에 따른 암 발병 위험을 추정하기 위해 이차원 몬테카를로 시뮬레이션을 적용하는 예제
+# 비소 집적도를 정확히 알 수 없으며 그에 따른 불확시성이 평균 2이고, 표준편차가 0.5인 정규분포에 의해
+# 잘 성명되는 상황을 가정, 비소에 노출되었을 때 암 발병 확률이 0.0013으로 고정되어 있지 않고,
+# 0.00001부터 0.0017 사이의 구간에서 정의도니 균일분포를 따른다고 가정
+
+set.seed(223)
+library(statmod)
+library(mc2d)
+ndunc(101)
+ndvar(1001)
+arsenic.conc <- mcstoc(rnorm,type="U",mean=2,sd=0.5)
+drinking.habit <- mcstoc(func = rempiricalD, type = "V", values = c(1,1/3,1/5),prob=c(0.432,0.226,0.342))
+tap.water.drank <- mcstoc(rinvgauss,type = "V", mean=6, shape=60)
+# 개인들의 비소 노출량을 계산
+arsenic.exposure <- arsenic.conc * drinking.habit * tap.water.drank
+arsenic.dose <- mcstoc(rpois, type = "VU", lambda=arsenic.exposure)
+prob.per.hit <- mcstoc(runif,type="U", min=0.00001, max=0.0017)
+risk <- 1-(1-prob.per.hit)^arsenic.dose
+As1 <- mc(arsenic.conc, drinking.habit, tap.water.drank, arsenic.exposure, arsenic.dose, prob.per.hit,risk)
+print(As1, digits=2)
+summary(As1)
+# 불확실성을 고려했을 때 0.006373 0.6% 되고, 평균에 대한 신뢰구간은 [0.04,1.3]
+
+# mcprobtree() 함수 변이 및 불확실성에 대해 혼합 분포를 사용한 mcnode객체를 구축하 수 있게 해준다.
+# EX) 마을 수돗물의 평균 비소 집적량이 평균 12이고 표준편차가 0.5인 정규분포를 따를 가능성이
+# 85%이고, 10에서 12.7 사이의 구간에서 정의된 균일분포를 따를 가능성은 15%라고 할때
+# 각각의 기능서엥 대해 따로 시뮬레이션 한 수 나중에 mcprobtree()함수로 결합하게 된다.
+arsenic.conc1 <- mcstoc(rnorm,type="U",mean=12,sd=0.5)
+arsenic.conc2 <- mcstoc(runif,type="U",min=10,max=12.7)
+# 평균 비소 집적도가 arsenic.conc1하에 결정될 가능성이 85%이고, arsenic.conc2는 15%
+# rbern()를 이용해 0.85 확률의 베르누이 확률변수를 생성해 1이 나오면 arsenic.conc에서 
+# 0이 나오면 arsenic.con2에서 나온 것으로 생각 할 수 있다.
+
+arsenic.distr <- mcstoc(rbern, type="U", prob=0.85)
+arsenic.conc <- mcprobtree(arsenic.distr, list("0" = arsenic.conc1, "1" = arsenic.conc2),type="U")
+summary(arsenic.conc)
+
+# corcode()함수는 두개 이상의 변수 사이의 상과계수를 지정할 대 사용한다.
+# 아이먼-코너버 방법을 이용해 mcnode 객체 사이의 순위상관구조를 구축해준다.
+# EX) drinking.habit과 tap.water.drank사이의 상관계수가 0.5라면 cornode()함수에서 target = 0.5로
+# 인수를 지정하면 이러한 상관관계 정보를 위험 분석 과정에 반영될 수 있다
+
+cornode(drinking.habit , tap.water.drank, target=0.5,result=TRUE, seed=223)
+
+# mcmodel()함수는 이차원 모넽카를로 모의 실험을 위한 As1모형을 단번에 작업할 수 있다.
+modelAs1<- mcmodel({
+  arsenic.conc <- mcstoc(rnorm, type="U", mean=2, sd=0.5)
+  drinking.habit <- mcstoc(func = rempiricalD, type = "V", values = c(1,1/3,1/5),
+                           prob = c(0.432,0.226,0.342))
+  tap.water.drank <- mcstoc(rinvgauss, type ="V", mean=6, shape=60)
+  arsenic.exposure <- arsenic.conc * drinking.habit * tap.water.drank
+  arsenic.dose <- mcstoc(rpois, type = "VU", lambda = arsenic.exposure)
+  prob.per.hit <- mcstoc(runif , type= "U", min = 0.00001, max = 0.0017)
+  risk <- 1 - (1 - prob.per.hit)^arsenic.dose
+  mc(arsenic.conc, drinking.habit, tap.water.drank, arsenic.exposure, arsenic.dose, prob.per.hit, risk)
+})
+
+# mcmodel() 함수를 사용해 mcmodel 객체를 생성하고 나면 evalmcmod() 함수를 사용해 모형을 평가해 볼 수 있다.
+# 변이 차원을 위한 모의 실험 횟수는 nsv 인수로, 불확실성 차원을 위한 모의 실험 횟수는 nsu인수로 지정된다.
+# 또한 seed 인수에 초기값을 지정할 수 있다.
+
+As1 <- evalmcmod(modelAs1,nsv=1001,nsu=101,seed=223)
+print(As1)
+
+# 변이 및 불확실성 차원에 대한 모의실험 횟수를 변경하고 싶은 경우에도 유용하다
+# 하지만 두 차원에 대한 모의실험 회수를 늘리면 수행시간이 길어짐
+
+As2 <- evalmcmod(modelAs1,nsv=100,nsu=10,seed=223)
+print(As2)
+
+#이를 히스트그램으로 출력
+hist(As1)
+plot(As1)
+# 개별 mcnode를 출력도 가능하다
+hist(prob.per.hit)
+plot(risk)
+
+# 다변량 노드
+# 비소 수준이 높아짐에 따른 암 발병 위험을 추정하는 것은 모든 변수들이 단변량
+# 다변량 자료에 대한 몬테카를로 모의실험도 가능한데, mcstoc() 함수에서 nvariates 인수에 변수의 갯수를 지정하면 된다.
+# 디리클레 분포, 다항분포, 다변량정규분포 등의 다변량 분포에 유용
+
+parameter1 <- mcstoc(rdirichlet, type="VU", nvariates=4, alpha=c(1,4,5,7))
+parameter1
+mcstoc(rmultinomial, type="VU", nvariates = 4, size=100, prob=parameter1)
+
+arsenic.conc <- mcdata(c(arsenic.conc1, arsenic.conc2),type="U", nvariates = 2)
+
+modelAs1.Bivariate<- mcmodel({
+  arsenic.conc <- mcdata(c(arsenic.conc1,arsenic.conc2),type="U",nvariates=2)
+  drinking.habit <- mcstoc(func = rempiricalD, type = "V", values = c(1,1/3,1/5),
+                           prob = c(0.432,0.226,0.342))
+  tap.water.drank <- mcstoc(rinvgauss, type ="V", mean=6, shape=60)
+  arsenic.exposure <- arsenic.conc * drinking.habit * tap.water.drank
+  arsenic.dose <- mcstoc(rpois, type = "VU", lambda = arsenic.exposure)
+  prob.per.hit <- mcstoc(runif , type= "U", min = 0.00001, max = 0.0017)
+  risk <- 1 - (1 - prob.per.hit)^arsenic.dose
+  mc(arsenic.conc, arsenic.dose, risk)
+})
+As1.Bivariate <- evalmcmod(modelAs1.Bivariate, nsv=1001, nsu=101,seed=223)
+print(As1.Bivariate)
+summary(As1.Bivariate)
