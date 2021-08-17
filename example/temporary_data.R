@@ -323,3 +323,136 @@ modelAs1.Bivariate<- mcmodel({
 As1.Bivariate <- evalmcmod(modelAs1.Bivariate, nsv=1001, nsu=101,seed=223)
 print(As1.Bivariate)
 summary(As1.Bivariate)
+
+#몬테카를로 적분
+# 정적분은 특정 구간 내에서 함수의 그래프와 x축 사이의 면적으로 대략 정의
+# 몬테카를로 적분은 대수의 법칙을 사용해 적분값의 근삿값을 구하는 방법으로
+# 평균값 정리와 관련이 되어 있다.
+
+u <- runif(100000, min=0, max=4)
+mean(u^2) * (4-0)
+
+# integrate()함수를 이용해 적분
+
+integrand <- function(x) x^2
+
+integrate(f = integrand, lower=0, upper=4)
+
+u <- runif(100000, min=3, max=6)
+mean(cos(u))*(6-3)
+
+integrand <- function(x) cos(x)
+integrate(integrand, lower=3, upper = 6)
+
+# 다중적분의 방법
+
+U <- runif(100000, min=3,max=7)
+V <- runif(100000, min=1,max=5)
+UV.mean <- mean(sin(U+V))
+
+UV.mean*16
+
+# 다중적분을 구하려면 난수 발생 후 계산한 평균값에 (b-a)(d-c)을 곱해줘야 한다.
+
+install.packages("cubature")
+library(cubature)
+
+f <- function(x) {sin(x[1]+x[2])}
+adaptIntegrate(f,lowerLimit = c(3,1),upperLimit=c(7,5))
+
+# 다음으로는 균일분포 난수를 이용해 적분값의 근사값을 계산하는 방법
+
+u <- runif(10000, min=0,max=4)
+mean(u^2)*(4-0)
+
+mean(u^2/dunif(u,min=0,max=4))
+
+u<- runif(10000,min=1,max=pi)
+mean(exp(u)/dunif(u,min=1,max=pi))
+
+# 난수 생성을 rexp()함수(지수분포 난수)를 생성해서 사용
+
+u <- rexp(10000)
+mean(exp(-(u+1))/dexp(u))
+f <- function(x) exp(-x)
+integrate(f,lower=1,upper=Inf)
+
+# 기각샘플링이란 난수 생성 중 일반적이지 않은 분포를 기준으로 생성하게 되었을때 사용하는 방법이다.
+# 난수를 발생시키기 위해 해당 분포의 밀도함수 곡선의 이래영역에서 샘플링 하는 것이다.
+
+triangle <- function(x) {(abs(x)<2)*(2-abs(x))}
+x <- seq(from=-3,to=3,by=0.001)
+plot(x,triangle(x),type="l",ylim=c(0,2),ylab=as.character("f(x)=(2-|x|)*I(|x| <2)"),cex.lab=1.3)
+# -2를 기준으로 2까지 삼각형 모양이 나옴
+
+rectangle <- function(x) {(abs(x)<2)*2}
+lines(x,rectangle(x),lty=2)
+
+# 위 그림의 직사각형 내부에서 정의되는 균일분포의 난수를 생성해서 뿌리면
+# 삼각 밀도 함수 아래 영역에 뿌려지는 점들, 역시 삼각형 영역 내에서 균일 분포를 따르게 된다.
+# runif()함수를 사용해 직사각형 내에 균일분포 난수를 생성
+y1 <- triangle(x)
+y2 <- rectangle(x)
+# 여기서 삼각형 외의 사각형 면적이 회색으로 칠해진다.
+polygon(c(x,rev(x)),c(y2,rev(y1)),col="darkgray")
+
+Rect1 <- runif(100000, min=-2, max = 2)
+Rect2 <- runif(100000, min=0, max=2)
+
+# 회색 영역에 놓인 점들을 제거하고 남은 점들을 tri.random에 저장
+tri.random <- Rect1[Rect2 < (abs(Rect1)<2) * (2-abs(Rect1))]
+# tri.random에는 삼각형 내부에 속한 점의 x좌표값들이 저장된다.
+# 50% 정도의 점들이 남아있게 된다는 예상을 확인하기 위해 length()를 이용해 길이를 계산
+length(tri.random)
+
+# 임의의 밀도함수 f로 부터 난수를 생성하려면 난수 발생이 용이한 형태에서 만족하는 밀도 함수 g를 사용한다.
+
+curve(dbeta(x,shape1=2,shape2 = 2),cex.lab=1.4)
+
+# 그림의 축이 1.5 이하이므로 c 값을 1.5로 지정
+
+c<- 1.5
+
+# g로 부터 난수를 생성
+Y <- runif(300,min=0,max=1)
+# 균일분포로부터 난수 u의 값 생성
+u <- runif(300,min=0,max=1)
+below <- which(c*u*dunif(Y,min=0,max=1)<=dbeta(Y,2,2))
+curve(dbeta(x,2,2),from=0,to=1,ylim=c(0,c),cex.lab=1.4)
+points(Y[below], c*u[below],pch="+")
+points(Y[-below],c*u[-below],pch="-")
+
+# 중요샘플링은 다른 분포로부터 생성된 난수들을 이용해 관심있는 분포의 성질을 알아보는 방법
+# 편의의 의한 샘플링 방법
+
+set.seed(23564)
+n <- 100000
+T <- 1
+lambda <- 0.65
+Rand.num <- runif(n,0,1)*(1-exp(-T*lambda))
+x <- -log(1-Rand.num)/lambda
+f <- exp(-x)
+g <- lambda*exp(-lambda*x)/(1-exp(-T*lambda))
+fg <- f/g
+sum(fg)/n
+
+# 몬테카를로 적분
+set.seed(23564)
+X <- runif(100000,0,1)
+Y <- exp(-X)
+mean(Y)
+
+
+# 브라운 운동을 모의실험 하는 예
+# 연속시간 확률과저응로 볼 수 있다.
+motion <- rnorm (10000,0,1)
+motion <- cumsum(motion)
+plot(motion, type="l", xlab="time",ylab="displacement")
+
+# 각 좌표축 별 증분을 따로 생성해 이차원 공간에서 시뮬레이션
+x.dist <- rnorm(10000,0,1)
+y.dist <- rnorm(10000,0,1)
+x.dist <- cumsum(x.dist)
+y.dist <- cumsum(y.dist)
+plot(x.dist,y.dist,type="l",xlab="",ylab="")
+
