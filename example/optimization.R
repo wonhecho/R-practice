@@ -173,3 +173,133 @@ df <- data.frame(mat,z)
 library(lattice)
 wireframe(z~x1*x2, data=df, shade = TRUE, scales = list(arrows=FALSE), screen = list(z=-35,x=-50))
 
+#persp() 함수를 사용하는 것을 선호
+hfn <- function(x,y){
+  (x-2)^2 + (y-1)^2
+}
+
+x <- seq(-5,5,by=0.2)
+y <- seq(-5,5, by=0.2)
+z <- outer(x,y,hfn)
+persp(x,y,z,phi=35,theta=50,col="purple",shade = .00000001, ticktype = "detailed")
+
+# optim() 함수의 초기치로 (0,0)을 사용하면 좋은 것으로 보인다.
+# 이차미분행렬을 직접 계산할 필요는 없고, 근사그래디언트 계산을 통해
+# 이차미분행렬의 근사값을 사용한다. optim() 함수 hessian =  TRUE와 같이 인수를 지정하면 
+# 수치적으로 미분해 얻은 이차미분행렬을 리턴해주고 gr인수에 지정한 함수 이름으로 그래디언트 함수를 만들어 준다.
+
+optim (par = c(0,0),h,method="BFGS",hessian=T)
+
+#이 부분의 최적해는 (2,1)
+
+# 선형계획법은 목적함수와 제약조건이 모두 선형의 득식 혹은 부등식으로 구성된 최적화 문제
+# EX) L(x) = 4x(1) + 7x(2) 이를 최소로 하는 값
+
+install.packages("lpSolveAPI")
+library("lpSolveAPI")
+
+#make.lp() 함수를 이용해 두 개의 제약조건과 두 개의 변수를 가진 선형계획 모형 객체인 lp1을 만들어보면
+lp1 <- make.lp(2,2)
+# set.column()함수를 사용해 x1에 대한 a(11), a(21)의 값으로 구성된 백터와 x(2)에 대한 a(12) a(22)로 구성된 벡터값
+
+set.column(lp1,1,c(1,1))
+set.column(lp1,2,c(1,2))
+# set.objfn()함수를 이용해 목적함수의 c1, c2의 값으로 구성된 벡터를 지정하고 set.constr.type()함수를 사용해
+# 부등식 방향을 지정하는 벡터 생성
+set.objfn(lp1,c(4,7))
+set.constr.type(lp1,rep(">=",2))
+# 마지막으로 set.rhs()를 사용해 우변에 있는 b1과 b2의 값으로 벡터를 지정
+set.rhs(lp1,c(4,6))
+lp1
+plot(lp1)
+#이 문제의 답은 (2,2)가 되는 것으로 보인다.
+write.lp(lp1,'model1.lp',type='lp')
+
+solve(lp1)
+
+get.variables(lp1)
+get.objective(lp1)
+install.packages("lpSolve")
+library(lpSolve)
+lp.ex1 <- lp(objective.in=c(4,7), const.mat=matrix(c(1,1,1,2),nrow=2),const.rhs=c(4,6),const.dir=rep(">=",2))
+lp.ex1
+lp.ex1$solution
+
+# 정수계획법
+# Ex) 노트북의 영업이익은 대당 52달러, 테블릿은 82달러
+# 노트북 생산은 100대 태블릿은 170대
+# 최소한 65대, 92대의 태블릿을 생산 공급해야 한다.
+
+lp2 <- make.lp(1,2)
+set.column(lp2,1,c(1))
+set.column(lp2,2,c(1))
+# 두가지 변수를 모델에 삽입
+set.objfn(lp2,c(50,82))
+#minimize를 설정해준다
+set.constr.type(lp2,c("<="))
+set.rhs(lp2,c(200))
+# 둘의 물량을 합쳤을때 최대의 양이 200
+
+# 두 수의 범위를 지정해준다
+set.bounds(lp2,lower=c(65,92),columns=c(1,2))
+set.bounds(lp2,upper=c(100,170),columns = c(1,2))
+
+# 최적해의 정수를 찾는다.
+set.type(lp2,1,"integer")
+set.type(lp2,2,"integer")
+lp2
+# 목적함수를 최대로 하는 최적문제를 풀어야 하므로 lp.control() 함수에 sense 인수를 지정
+lp.control(lp2,sense='max')
+solve(lp2)
+get.variables(lp2)
+# 최적해
+get.objective(lp2)
+# 최댓값
+
+#제약이 없는 변수
+# lp()는 변수들이 음이 아닌 값이라는 제약 조건을 만족하는 경우 사용하는 함수
+lp.ex3 <- lp(objective.in = c(3,4,-4),
+             const.mat=matrix(c(1,3,1,
+                                2,-1,-1,
+                                -2,1,1),
+                              nrow=3),
+             const.rhs = c(14,0,2),
+             const.dir = c("<=",">=","<="),direction="min")
+lp.ex3
+lp.ex3$solution
+
+# 이차계획법은 목적함수가 2차식이고, 선형인 경우 최적화 문제
+# quadprog패키지의 solve.QP()를 이용하면 된다.
+
+install.packages("quadprog")
+library(quadprog)
+help("solve.QP")
+QP <- 2*diag(c(1,2,4))
+QP
+d <- c(-1,-1,5)
+A <- matrix(c(-1,1,0,0,0,-1,-1,0,0),nrow=3)
+A
+b <- c(-1,5,0)
+qp1 <- solve.QP(QP,-d,t(A),b)
+qp1$solution
+qp1$value
+
+# 일반적인 비선형최적화 
+install.packages("Rsolnp")
+library(Rsolnp)
+help(solnp)
+f <- function(x){
+  4*x[1] - 2*x[2]
+}
+ctr <- function(x){
+  x[1]^2 + x[2]^2
+}
+constraints <- c(41)
+x0 <- c(1,1)
+
+gnlp1 <- solnp(x0,fun=f,eqfun=ctr,eqB =constraints)
+gnlp1$pars
+
+x0 <- c(-5,-5)
+gnlp2 <- solnp(x0,fun=f,eqfun=ctr,ineqLB = c(0),ineqUB = c(45))
+gnlp2$pars
