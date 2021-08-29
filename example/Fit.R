@@ -34,6 +34,7 @@ ad.test(probeA)
 
 # p-value 를 결과적으로 구할 수 있게 되는데, p-value >0.05이면 가설이 채택되고, p-value <0.05면 기각된다.
 # https://ko.wikipedia.org/wiki/%EC%9C%A0%EC%9D%98_%ED%99%95%EB%A5%A0
+#
 
 
 
