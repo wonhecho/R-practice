@@ -19,6 +19,7 @@ data2<-as.data.frame(lapply(data[,-8],scale))
 #boxplot 그래프를 통해 확인.
 boxplot(data2[,1:7])
 set.seed(10)
+# 샘플 추출
 index<-sample(1:210,168,replace=F)
 train<-data2[index,-8]
 test<-data2[-index,-8]
