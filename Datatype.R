@@ -9,7 +9,7 @@
 #   .na()      NA형인지 확인
 #   .null()    NULL형인지 확인
 # Class()      데이터 형태 확인
-# SUM()        합
+# SUM()        합 확인
 # factor()     범주형 함수 만들기
 # nlevels()    범주형 변수 레벨 개수 반환
 # levels()     범주형 변수 레벨명 반환
