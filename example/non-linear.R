@@ -6,7 +6,7 @@ adsorption <- read.csv('adsorption.txt')
 # nls()함수를 사용하면 등식을 적합시킬수 있다.
 # adsorption 데이터에는 세가지 다른 온도 조건 하에서 측정한 세개의 다른
 # 값인 T1,T2,T3가 포함되어 있다
-#랭뮤어 공식에 있는 알파의 추정치를 먼저 구한다.
+# 랭뮤어 흡착 등온 공식에 있는 알파의 추정치를 먼저 구한다.
 
 langmuir.T1 <- 'T1 ~(alpha.1*P)/(1+alpha.1*P)'
 langmuir.T2 <- 'T2 ~(alpha.2*P)/(1+alpha.2*P)'
