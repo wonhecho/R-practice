@@ -5,7 +5,7 @@ library('class')
 data<-read.table("data/knndata.txt",header=T)
 View(data)
 str(data)
-boxplot(data[,1:7])
+boxplot(data[,1:7] )
 scale <- function(x){
   return((x-min(x))/(max(x)-min(x)))
 }
