@@ -1,7 +1,7 @@
 library(dplyr)
 library(tictoc)
 
-#데이터를 불러옵니다
+#데이터를 불러옵니다.
 tic("loading data")
 sales_data = fread("sales_train.csv")
 item_data = fread("items.csv")
